@@ -1,0 +1,8 @@
+# development dependencies
+pytest
+pytest-cov
+coverage
+black
+ruff
+mypy
+pre-commit

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: market-ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: market-ops
+  template:
+    metadata:
+      labels:
+        app: market-ops
+    spec:
+      containers:
+        - name: market-ops
+          image: creating-autonomous-ai-agents:market-ops
+          ports:
+            - containerPort: 8000
+          env:
+            - name: TWITTER_BEARER_TOKEN
+              value: ""
+            - name: USE_LLM
+              value: "0"
+            - name: SLACK_WEBHOOK_URL
+              value: ""
+            - name: SMTP_SERVER
+              value: ""
+            - name: SMTP_PORT
+              value: ""
+            - name: SMTP_USER
+              value: ""
+            - name: SMTP_PASSWORD
+              value: ""
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          hostPath:
+            path: /var/lib/market_ops_data
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: market-ops
+spec:
+  selector:
+    app: market-ops
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP

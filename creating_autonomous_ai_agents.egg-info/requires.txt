@@ -1,0 +1,6 @@
+networkx
+pandas
+jira
+PyGithub
+pytest
+scikit-learn

@@ -1,0 +1,16 @@
+networkx
+pandas
+jira
+PyGithub
+pytest
+scikit-learn
+geopy
+schedule
+fastapi
+uvicorn
+requests
+openai
+langchain
+tweepy
+mlflow  # optional experiment tracking
+# market ops agent may need additional packages (requests, langchain, etc.)

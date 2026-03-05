@@ -1,0 +1,1 @@
+"""Simple anime selection agent."""
