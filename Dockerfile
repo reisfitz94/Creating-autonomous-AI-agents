@@ -17,7 +17,11 @@ COPY run_agent.py cli.py ./
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt && \
     pip install -r requirements-dev.txt && \
-    python -m pip install -e .
+    python -m pip install -e . && \
+    useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 # default entrypoint launches the Market Ops API; command-line args can override
 ENTRYPOINT ["python", "-m", "market_ops.cli", "api"]

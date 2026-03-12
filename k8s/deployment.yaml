@@ -12,9 +12,22 @@ spec:
       labels:
         app: market-ops
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: market-ops
           image: creating-autonomous-ai-agents:market-ops
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           ports:
             - containerPort: 8000
           env:
@@ -22,6 +35,10 @@ spec:
               value: ""
             - name: USE_LLM
               value: "0"
+            - name: MARKET_OPS_API_KEY
+              value: ""
+            - name: MARKET_OPS_DB_PATH
+              value: "/app/data/market_ops.db"
             - name: SLACK_WEBHOOK_URL
               value: ""
             - name: SMTP_SERVER
@@ -35,11 +52,15 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /app/data
+            - name: tmp
+              mountPath: /tmp
       volumes:
         - name: data
           hostPath:
             path: /var/lib/market_ops_data
             type: DirectoryOrCreate
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

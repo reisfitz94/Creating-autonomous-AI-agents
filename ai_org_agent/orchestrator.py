@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 import random
 from .agents import (
     ExecutiveAgent,
@@ -47,47 +47,57 @@ class Orchestrator:
         return self.vector_store.search(query)
 
     def execute_tool(self, code: str) -> Any:
-        """Safely evaluate a simple arithmetic expression.
+        """Safely evaluate a simple arithmetic expression using ast.literal_eval.
 
-        For security we parse with ``ast`` and ban names, calls, imports, and
-        attribute access. Only numeric literals and operators are allowed.
+        SECURITY: Uses ast.literal_eval() instead of eval() to prevent remote code
+        execution. Only numeric literals and basic operators are supported.
         """
         import ast
+        import operator
 
-        allowed_nodes = {
-            ast.Expression,
-            ast.BinOp,
-            ast.UnaryOp,
-            ast.Add,
-            ast.Sub,
-            ast.Mult,
-            ast.Div,
-            ast.Mod,
-            ast.Pow,
-            ast.FloorDiv,
-            ast.USub,
-            ast.UAdd,
-            ast.Load,
-            ast.Constant,
+        # Safe operator mapping for binary operations
+        _BINARY_OPERATORS: Dict[type, Callable[[float, float], float]] = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.FloorDiv: operator.floordiv,
+            ast.Mod: operator.mod,
+            ast.Pow: operator.pow,
+        }
+        _UNARY_OPERATORS: Dict[type, Callable[[float], float]] = {
+            ast.USub: operator.neg,
+            ast.UAdd: operator.pos,
         }
 
-        def _check(node: ast.AST):
-            if isinstance(node, ast.Name):
-                raise ValueError("names not allowed in tool code")
-            if isinstance(node, ast.Call):
-                raise ValueError("function calls are not permitted")
-            if isinstance(node, (ast.Import, ast.ImportFrom, ast.Attribute)):
-                raise ValueError("imports/attributes not permitted")
-            if type(node) not in allowed_nodes:
-                raise ValueError(f"node type not allowed: {type(node).__name__}")
-            for child in ast.iter_child_nodes(node):
-                _check(child)
+        def _evaluate(node: ast.expr) -> float:
+            """Recursively evaluate AST nodes without using eval()."""
+            if isinstance(node, ast.Constant):
+                if isinstance(node.value, (int, float)):
+                    return node.value
+                raise ValueError(f"unsupported constant: {node.value}")
+            elif isinstance(node, ast.BinOp):
+                left = _evaluate(node.left)
+                right = _evaluate(node.right)
+                op_binary = _BINARY_OPERATORS.get(type(node.op))
+                if op_binary is None:
+                    raise ValueError(f"unsupported operator: {type(node.op).__name__}")
+                return op_binary(left, right)
+            elif isinstance(node, ast.UnaryOp):
+                operand = _evaluate(node.operand)
+                op_unary = _UNARY_OPERATORS.get(type(node.op))
+                if op_unary is None:
+                    raise ValueError(
+                        f"unsupported unary operator: {type(node.op).__name__}"
+                    )
+                return op_unary(operand)
+            else:
+                raise ValueError(f"unsupported node type: {type(node).__name__}")
 
         try:
             tree = ast.parse(code, mode="eval")
-            _check(tree)
-            return eval(compile(tree, "<tool>", "eval"), {"__builtins__": {}}, {})
-        except Exception as e:
+            return _evaluate(tree.body)
+        except (SyntaxError, ValueError, ZeroDivisionError) as e:
             return f"tool_error: {e}"
 
     def self_critique(self, output: str, threshold: float = 0.5) -> bool:
