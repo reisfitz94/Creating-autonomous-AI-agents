@@ -30,6 +30,8 @@ class AIProjectManagerAgent:
         """
         if not self.jira:
             raise RuntimeError("Jira client has not been configured")
+        if not jql or not str(jql).strip():
+            raise ValueError("jql query cannot be empty")
         issues = self.jira.search_issues(jql)
         return [issue.raw for issue in issues]
 
@@ -40,6 +42,8 @@ class AIProjectManagerAgent:
         G = nx.DiGraph()
         for ticket in tickets:
             key = ticket.get("key")
+            if not key:
+                continue
             G.add_node(key, **ticket)
             # Example: look for "issuelinks" with "blocks" or "depends on"
             for link in ticket.get("fields", {}).get("issuelinks", []):
@@ -60,9 +64,17 @@ class AIProjectManagerAgent:
 
         Returns the keys of the top_n nodes by betweenness centrality.
         """
-        centrality = nx.betweenness_centrality(graph)
+        if graph.number_of_nodes() == 0:
+            return []
+
+        # Exact betweenness is expensive for very large graphs.
+        if graph.number_of_nodes() > 1000:
+            centrality = nx.degree_centrality(graph)
+        else:
+            centrality = nx.betweenness_centrality(graph)
         sorted_nodes = sorted(centrality.items(), key=lambda x: -x[1])
-        return [node for node, _ in sorted_nodes[:top_n]]
+        limit = max(1, int(top_n))
+        return [node for node, _ in sorted_nodes[:limit]]
 
     def predict_sprint_slippage(
         self,
@@ -81,6 +93,8 @@ class AIProjectManagerAgent:
                     {"velocity": velocity_history, "remaining": [remaining_work]}
                 )
             )[0]
+        if not velocity_history:
+            return float("inf")
         avg_velocity = sum(velocity_history) / len(velocity_history)
         if avg_velocity <= 0:
             return float("inf")
@@ -127,6 +141,8 @@ class AIProjectManagerAgent:
         """Calculate average commits per day for a GitHub repository."""
         if not self.github:
             raise RuntimeError("GitHub client not configured")
+        if days <= 0:
+            raise ValueError("days must be > 0")
         repo = self.github.get_repo(repo_name)
         commits = repo.get_commits(since=pd.Timestamp.now() - pd.Timedelta(days=days))
         return commits.totalCount / days
@@ -134,8 +150,13 @@ class AIProjectManagerAgent:
     def detect_burndown_anomalies(self, burndown_data: pd.DataFrame) -> List[int]:
         """Detect days where the burndown deviated significantly from trend."""
         # simple z-score on daily remaining work
+        if "remaining" not in burndown_data.columns or burndown_data.empty:
+            return []
         burndown_data = burndown_data.copy()
+        std = burndown_data["remaining"].std()
+        if std == 0 or pd.isna(std):
+            return []
         burndown_data["z"] = (
             burndown_data["remaining"] - burndown_data["remaining"].mean()
-        ) / burndown_data["remaining"].std()
+        ) / std
         return burndown_data[burndown_data["z"].abs() > 2].index.tolist()

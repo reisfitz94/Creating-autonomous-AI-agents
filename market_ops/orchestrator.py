@@ -1,5 +1,6 @@
 import logging
 from typing import List, Dict, Any, Optional
+from concurrent.futures import ThreadPoolExecutor
 
 
 logger = logging.getLogger(__name__)
@@ -13,9 +14,13 @@ class MarketOpsCommander:
         self,
         data_sources: Optional[List[str]] = None,
         db_path: Optional[str] = None,
+        max_workers: int = 3,
+        max_logs: int = 5000,
     ):
         self.data_sources = data_sources or []
         self.memory: Dict[str, Any] = {"logs": []}
+        self.max_workers = max(1, int(max_workers))
+        self.max_logs = max(100, int(max_logs))
         self.db_conn = None
         if db_path:
             from .db import get_connection, init_schema, load_strategy
@@ -28,13 +33,16 @@ class MarketOpsCommander:
             self.memory["strategy"] = {}
 
     def log(self, msg: str):
-        self.memory["logs"].append(msg)
-        logger.info(msg)
+        text = str(msg)
+        self.memory["logs"].append(text)
+        if len(self.memory["logs"]) > self.max_logs:
+            self.memory["logs"] = self.memory["logs"][-self.max_logs :]
+        logger.info(text)
         # also record to DB if available
         if self.db_conn:
             from .db import log_event
 
-            log_event(self.db_conn, "log", msg)
+            log_event(self.db_conn, "log", text)
 
     def fetch_financial_data(self):
         from .data.finance import fetch_yahoo
@@ -62,9 +70,22 @@ class MarketOpsCommander:
 
     def run_loop(self):
         self.log("starting run loop")
-        fin = self.fetch_financial_data()
-        sent = self.fetch_social_sentiment()
-        news = self.fetch_news()
+
+        def _safe_fetch(name: str, fn):
+            try:
+                return fn()
+            except Exception as e:
+                self.log(f"{name} failed: {e}")
+                return {} if name != "news" else []
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as pool:
+            f_fin = pool.submit(_safe_fetch, "finance", self.fetch_financial_data)
+            f_sent = pool.submit(_safe_fetch, "sentiment", self.fetch_social_sentiment)
+            f_news = pool.submit(_safe_fetch, "news", self.fetch_news)
+            fin = f_fin.result()
+            sent = f_sent.result()
+            news = f_news.result()
+
         combined = {"fin": fin, "sent": sent, "news": news}
         ops = self.score_opportunities(combined)
         self.log(f"found {len(ops)} opportunities")
@@ -72,11 +93,14 @@ class MarketOpsCommander:
         if ops:
             self.memory.setdefault("strategy", {})
             top = ops[0]
-            self.memory["strategy"][top["symbol"]] = top["score"]
+            symbol = top.get("symbol")
+            score = top.get("score", 0.0)
+            if symbol is not None:
+                self.memory["strategy"][symbol] = score
             from .models.reinforcement import update_strategy
 
             # pretend the outcome is proportional to the score
-            outcome = top.get("score", 0.0)
+            outcome = score
             self.memory["strategy"] = update_strategy(self.memory["strategy"], outcome)
             # persist strategy to DB if available
             if self.db_conn:

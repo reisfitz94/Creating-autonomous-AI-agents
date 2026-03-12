@@ -11,6 +11,8 @@ class MultiAgentSystem:
         self.reviewer = BusinessReviewerAgent(kpis=kpis)
 
     def run_workflow(self, X, y, model_cls, **model_kwargs):
+        if model_cls is None:
+            raise ValueError("model_cls must be provided")
         results: Dict[str, Any] = {}
         # step 1: build model
         model = self.ds.build_model(X, y, model_cls, **model_kwargs)
@@ -22,4 +24,10 @@ class MultiAgentSystem:
         results["methodology"] = self.auditor.review_methodology("Auto run")
         # step 3: business review
         results["kpi_review"] = self.reviewer.assess_kpi_alignment(model, "default")
+        results["meta"] = {
+            "rows": int(len(X)) if hasattr(X, "__len__") else None,
+            "features": (
+                int(getattr(X, "shape", [0, 0])[1]) if hasattr(X, "shape") else None
+            ),
+        }
         return results

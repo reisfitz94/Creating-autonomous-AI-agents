@@ -28,7 +28,10 @@ def simple_opportunity_score(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             pct_change = float(raw) / 100.0  # convert from percent
         except (TypeError, ValueError):
             pct_change = 0.0
-        sentiment = sent.get(symbol, {}).get("sentiment", 0.0)
+        try:
+            sentiment = float(sent.get(symbol, {}).get("sentiment", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            sentiment = 0.0
         news_count = sum(
             1 for item in news if symbol.lower() in item.get("headline", "").lower()
         )
@@ -54,7 +57,8 @@ def simple_opportunity_score(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         if key:
             openai.api_key = key
             try:
-                prompt = f"Score these market opportunities:\n{scores}"
+                llm_input = scores[:50]
+                prompt = f"Score these market opportunities and return strict JSON list with keys symbol and score:\n{llm_input}"
                 resp = openai.ChatCompletion.create(
                     model="gpt-3.5-turbo",
                     messages=[{"role": "user", "content": prompt}],
@@ -65,7 +69,20 @@ def simple_opportunity_score(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 import json
 
                 llm_scores = json.loads(text)
-                return llm_scores
+                if isinstance(llm_scores, list):
+                    cleaned: List[Dict[str, Any]] = []
+                    for row in llm_scores:
+                        if not isinstance(row, dict):
+                            continue
+                        symbol = row.get("symbol")
+                        try:
+                            score = float(row.get("score", 0.0))
+                        except (TypeError, ValueError):
+                            score = 0.0
+                        if symbol:
+                            cleaned.append({"symbol": symbol, "score": score})
+                    if cleaned:
+                        return cleaned
             except Exception:
                 # fall back to heuristic
                 pass

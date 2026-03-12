@@ -14,6 +14,11 @@ def fetch_twitter_sentiment(keywords: list) -> Dict[str, Any]:
     tweets via a naive polarity measure.  Otherwise fall back to random
     values, which is useful for testing and offline development.
     """
+    if not keywords:
+        return {}
+    # Keep request volume bounded and deterministic while supporting large inputs.
+    keywords = [kw for kw in dict.fromkeys(keywords) if kw][:100]
+
     if TWITTER_BEARER:
         try:
             import tweepy

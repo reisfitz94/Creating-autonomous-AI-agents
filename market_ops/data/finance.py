@@ -4,8 +4,11 @@ import yfinance as yf
 
 def fetch_yahoo(symbols: list) -> Dict[str, Any]:
     """Fetch latest price and percent change for a list of symbols using yfinance."""
+    if not symbols:
+        return {}
     data: Dict[str, Any] = {}
-    for sym in symbols:
+    unique_symbols = [s for s in dict.fromkeys(symbols) if s]
+    for sym in unique_symbols:
         try:
             ticker = yf.Ticker(sym)
             hist = ticker.history(period="2d")

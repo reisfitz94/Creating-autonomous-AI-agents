@@ -16,8 +16,14 @@ class DataScientistAgent:
 
         Returns the fitted model.
         """
+        if X is None or y is None:
+            raise ValueError("X and y must be provided")
+        X_df = pd.DataFrame(X)
+        y_series = pd.Series(y)
+        if X_df.empty or y_series.empty:
+            raise ValueError("X and y must not be empty")
         self.model = model_cls(**kwargs)
-        self.model.fit(X, y)
+        self.model.fit(X_df, y_series)
         return self.model
 
 
@@ -29,8 +35,21 @@ class AuditorAgent:
 
     def check_leakage(self, X: pd.DataFrame, y: pd.Series) -> bool:
         """Naively examine whether any feature correlates too perfectly with the target."""
-        corr = X.corrwith(y).abs()
-        if corr.max() > 0.95:
+        X_df = pd.DataFrame(X)
+        y_series = pd.Series(y)
+        if X_df.empty or y_series.empty:
+            return False
+
+        # Downsample very large inputs for predictable runtime.
+        if len(X_df) > 50000:
+            sampled = X_df.sample(n=50000, random_state=42)
+            y_sampled = y_series.loc[sampled.index]
+        else:
+            sampled = X_df
+            y_sampled = y_series
+
+        corr = sampled.corrwith(y_sampled).abs().fillna(0.0)
+        if not corr.empty and corr.max() > 0.95:
             return True
         return False
 
@@ -38,6 +57,8 @@ class AuditorAgent:
         self, data: pd.DataFrame, label: str, protected: str
     ) -> Dict[str, float]:
         """Compute simple demographic parity difference."""
+        if label not in data.columns or protected not in data.columns:
+            return {}
         groups = data.groupby(protected)[label].mean()
         if groups.shape[0] < 2:
             return {}

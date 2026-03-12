@@ -15,11 +15,12 @@ from .agents import (
 class Orchestrator:
     """Meta-agent coordinating the organization with memory, tools, and critique."""
 
-    def __init__(self):
+    def __init__(self, max_logs: int = 5000):
         from .vector_store import VectorStore
 
         self.memory: Dict[str, Any] = {"logs": []}
         self.vector_store = VectorStore()
+        self.max_logs = max(100, int(max_logs))
         self.executive = ExecutiveAgent()
         self.tech_lead = TechnicalLeadAgent()
         self.ds = DataScientistAgent()
@@ -30,12 +31,16 @@ class Orchestrator:
         self.cost = CostOptimizationAgent()
 
     def log(self, message: str):
-        print(f"[LOG] {message}")
-        self.memory["logs"].append(message)
+        msg = str(message)
+        print(f"[LOG] {msg}")
+        self.memory["logs"].append(msg)
+        if len(self.memory["logs"]) > self.max_logs:
+            self.memory["logs"] = self.memory["logs"][-self.max_logs :]
 
     def store_vector(self, item: Dict[str, Any]):
         # delegate to the vector store object
-        self.vector_store.add(item.get("text", ""), metadata=item)
+        safe_item = item or {}
+        self.vector_store.add(str(safe_item.get("text", "")), metadata=safe_item)
 
     def retrieve_similar(self, query: str) -> Optional[Dict[str, Any]]:
         # proxy to vector store search
@@ -49,6 +54,23 @@ class Orchestrator:
         """
         import ast
 
+        allowed_nodes = {
+            ast.Expression,
+            ast.BinOp,
+            ast.UnaryOp,
+            ast.Add,
+            ast.Sub,
+            ast.Mult,
+            ast.Div,
+            ast.Mod,
+            ast.Pow,
+            ast.FloorDiv,
+            ast.USub,
+            ast.UAdd,
+            ast.Load,
+            ast.Constant,
+        }
+
         def _check(node: ast.AST):
             if isinstance(node, ast.Name):
                 raise ValueError("names not allowed in tool code")
@@ -56,6 +78,8 @@ class Orchestrator:
                 raise ValueError("function calls are not permitted")
             if isinstance(node, (ast.Import, ast.ImportFrom, ast.Attribute)):
                 raise ValueError("imports/attributes not permitted")
+            if type(node) not in allowed_nodes:
+                raise ValueError(f"node type not allowed: {type(node).__name__}")
             for child in ast.iter_child_nodes(node):
                 _check(child)
 
@@ -81,6 +105,10 @@ class Orchestrator:
         return True
 
     def run_task(self, objective: str) -> Dict[str, Any]:
+        objective = (objective or "").strip()
+        if not objective:
+            raise ValueError("objective cannot be empty")
+
         out = {}
         out["exec"] = self.executive.act({"objective": objective}, self.memory)
         self.log(out["exec"])
@@ -102,19 +130,27 @@ class Orchestrator:
 
         out["audit"] = self.auditor.act({}, self.memory)
         self.log(out["audit"])
+        self.store_vector({"text": out["audit"], "role": "audit"})
         out["risk"] = self.risk.act({}, self.memory)
         self.log(out["risk"])
+        self.store_vector({"text": out["risk"], "role": "risk"})
         out["deploy"] = self.deploy.act({}, self.memory)
         self.log(out["deploy"])
+        self.store_vector({"text": out["deploy"], "role": "deploy"})
         out["monitor"] = self.monitor.act({}, self.memory)
         self.log(out["monitor"])
+        self.store_vector({"text": out["monitor"], "role": "monitor"})
         out["cost"] = self.cost.act({}, self.memory)
         self.log(out["cost"])
+        self.store_vector({"text": out["cost"], "role": "cost"})
         return {"outputs": out, "memory": self.memory}
 
     def simulate_drift(self, data: list, noise_level: float = 0.5) -> list:
         """Produce a noisy version of the data to simulate drift or adversarial noise."""
         noisy = []
         for x in data:
-            noisy.append(x + (noise_level * (0.5 - random.random())))
+            try:
+                noisy.append(x + (noise_level * (0.5 - random.random())))
+            except Exception:
+                noisy.append(x)
         return noisy
