@@ -42,7 +42,8 @@ class AnimeAgent:
 
         if os.getenv("USE_JIKAN"):
             try:
-                resp = self._session.get(
+                # Use requests.get for easier test mocking compatibility.
+                resp = requests.get(
                     "https://api.jikan.moe/v4/anime",
                     params={"q": normalized, "limit": 20},
                     timeout=5,

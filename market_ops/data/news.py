@@ -3,19 +3,15 @@ import requests  # type: ignore[import-untyped]
 from xml.etree import ElementTree as ET
 
 
-KNOWN_RSS = {
-    "cnn": "http://rss.cnn.com/rss/edition.rss",
-    "reuters": "http://feeds.reuters.com/reuters/topNews",
-}
-
-
 def fetch_news_headlines(sources: List[str]) -> List[Dict[str, Any]]:
     """Fetch headlines from given RSS feed URLs (sources)."""
     if not sources:
         return []
     headlines: List[Dict[str, Any]] = []
-    for raw_src in sources:
-        src = KNOWN_RSS.get(raw_src, raw_src)
+    for src in sources:
+        if not str(src).startswith(("http://", "https://")):
+            headlines.append({"source": src, "headline": "<error>"})
+            continue
         try:
             resp = requests.get(src, timeout=5)
             resp.raise_for_status()
