@@ -58,9 +58,7 @@ class AuditorAgent:
         if numeric.empty:
             return False
         corr = numeric.corrwith(y_sampled).abs().fillna(0.0)
-        if not corr.empty and corr.max() > 0.95:
-            return True
-        return False
+        return not corr.empty and corr.max() > 0.95
 
     def check_bias(
         self, data: pd.DataFrame, label: str, protected: str

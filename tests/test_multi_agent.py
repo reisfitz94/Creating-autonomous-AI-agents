@@ -16,11 +16,11 @@ def make_fake_data():
 
 
 def test_multi_agent_workflow():
-    X, y, df = make_fake_data()
+    X, y, _ = make_fake_data()
     mas = MultiAgentSystem(kpis={"default": None})
     results = mas.run_workflow(X, y, LogisticRegression, solver="liblinear")
     assert "model" in results
-    assert results["leakage"] is False
+    assert not results["leakage"]
     assert "kpi_review" in results
 
 

@@ -14,9 +14,7 @@ class ExecutiveAgent(BaseAgent):
         super().__init__("Executive")
 
     def act(self, task: Dict[str, Any], memory: Dict[str, Any]) -> str:
-        objective = str(task.get("objective", "")).strip()
-        if not objective:
-            objective = "unspecified objective"
+        objective = str(task.get("objective", "")).strip() or "unspecified objective"
         return f"Executive sets objectives: {objective}"
 
 

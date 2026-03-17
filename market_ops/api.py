@@ -153,8 +153,7 @@ def start_experiment(
     from .experiments.run import run_experiment
 
     METRICS["experiment_calls"] += 1
-    res = run_experiment(name, {"features": features, "samples": samples})
-    return res
+    return run_experiment(name, {"features": features, "samples": samples})
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -164,7 +163,7 @@ def dashboard():
     strategy = commander.memory.get("strategy", {})
     safe_strategy = escape(str(strategy))
     safe_logs = escape(str(logs[-25:]))
-    html = f"""
+    return f"""
     <html>
       <head><title>Market Ops Dashboard</title></head>
       <body style='font-family: sans-serif; max-width: 900px; margin: 24px auto;'>
@@ -177,4 +176,3 @@ def dashboard():
       </body>
     </html>
     """
-    return html

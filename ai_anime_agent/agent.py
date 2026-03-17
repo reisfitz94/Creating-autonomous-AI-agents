@@ -93,7 +93,7 @@ class AnimeAgent:
 
     def select(self, index: int) -> Dict[str, Any]:
         """Pick an entry by index from the last search results."""
-        source = self.last_results if self.last_results else self.catalogue
+        source = self.last_results or self.catalogue
         if index < 0 or index >= len(source):
             raise IndexError("Selection index out of range")
         return source[index]

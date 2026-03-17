@@ -20,7 +20,7 @@ class Orchestrator:
 
         self.memory: Dict[str, Any] = {"logs": []}
         self.vector_store = VectorStore()
-        self.max_logs = max(100, int(max_logs))
+        self.max_logs = max(100, max_logs)
         self.executive = ExecutiveAgent()
         self.tech_lead = TechnicalLeadAgent()
         self.ds = DataScientistAgent()
@@ -31,9 +31,8 @@ class Orchestrator:
         self.cost = CostOptimizationAgent()
 
     def log(self, message: str):
-        msg = str(message)
-        print(f"[LOG] {msg}")
-        self.memory["logs"].append(msg)
+        print(f"[LOG] {message}")
+        self.memory["logs"].append(message)
         if len(self.memory["logs"]) > self.max_logs:
             self.memory["logs"] = self.memory["logs"][-self.max_logs :]
 
@@ -110,9 +109,7 @@ class Orchestrator:
         """
         if not output or len(output.strip()) < threshold * 100:
             return False
-        if "error" in output.lower():
-            return False
-        return True
+        return "error" not in output.lower()
 
     def run_task(self, objective: str) -> Dict[str, Any]:
         objective = (objective or "").strip()
