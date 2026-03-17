@@ -39,6 +39,16 @@ spec:
               value: ""
             - name: MARKET_OPS_DB_PATH
               value: "/app/data/market_ops.db"
+            - name: MARKET_OPS_ALLOWED_HOSTS
+              value: "market-ops,market-ops.default.svc,localhost,127.0.0.1"
+            - name: MARKET_OPS_CORS_ORIGINS
+              value: ""
+            - name: MARKET_OPS_ENFORCE_HTTPS
+              value: "1"
+            - name: MARKET_OPS_RATE_LIMIT_WINDOW_SEC
+              value: "60"
+            - name: MARKET_OPS_RATE_LIMIT_MAX_REQUESTS
+              value: "30"
             - name: SLACK_WEBHOOK_URL
               value: ""
             - name: SMTP_SERVER

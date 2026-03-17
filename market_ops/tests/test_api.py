@@ -1,3 +1,5 @@
+import importlib
+
 from fastapi.testclient import TestClient
 from market_ops import api
 from market_ops.api import app
@@ -96,3 +98,25 @@ def test_rate_limit_on_protected_endpoints(monkeypatch):
 
     monkeypatch.setattr(api, "API_KEY", None)
     api.RATE_BUCKETS.clear()
+
+
+def test_trusted_host_blocks_unknown_host_header():
+    blocked = client.get("/health", headers={"Host": "evil.example.com"})
+    assert blocked.status_code == 400
+
+
+def test_cors_preflight_allows_configured_origin(monkeypatch):
+    monkeypatch.setenv("MARKET_OPS_CORS_ORIGINS", "https://ops.example.com")
+    reloaded_api = importlib.reload(api)
+    cors_client = TestClient(reloaded_api.app)
+
+    preflight = cors_client.options(
+        "/run",
+        headers={
+            "Origin": "https://ops.example.com",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == "https://ops.example.com"
