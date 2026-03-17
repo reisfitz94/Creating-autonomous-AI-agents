@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Any, Dict
+from typing import Dict
 
 
 def get_connection(db_path: str = ":memory:") -> sqlite3.Connection:

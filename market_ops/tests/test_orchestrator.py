@@ -23,6 +23,20 @@ def test_scoring():
     assert ops[0]["score"] > 0
 
 
+def test_scoring_news_match_is_token_based():
+    from market_ops.models.scoring import simple_opportunity_score
+
+    data = {
+        "fin": {"AAPL": {"price": 100, "change": 0.0}},
+        "sent": {"AAPL": {"sentiment": 0.0}},
+        # AAPL should not match the token AAPLX.
+        "news": [{"headline": "Analysts bullish on AAPLX after earnings"}],
+    }
+    ops = simple_opportunity_score(data)
+    assert ops
+    assert ops[0]["details"]["news_count"] == 0
+
+
 def test_reinforcement():
     from market_ops.models.reinforcement import update_strategy
 

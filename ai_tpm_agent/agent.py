@@ -88,9 +88,10 @@ class AIProjectManagerAgent:
         can supply a statistical/regression model as `model`.
         """
         if model is not None:
+            latest_velocity = velocity_history[-1] if velocity_history else 0
             return model.predict(
                 pd.DataFrame(
-                    {"velocity": velocity_history, "remaining": [remaining_work]}
+                    [{"velocity": latest_velocity, "remaining": remaining_work}]
                 )
             )[0]
         if not velocity_history:
@@ -109,8 +110,9 @@ class AIProjectManagerAgent:
         for ticket in tickets:
             labels = ticket.get("fields", {}).get("labels", [])
             for label in labels:
-                if label.startswith("risk:"):
-                    risk_summary[label] = risk_summary.get(label, 0) + 1
+                label_text = str(label).strip().lower()
+                if label_text.startswith("risk:"):
+                    risk_summary[label_text] = risk_summary.get(label_text, 0) + 1
         return {
             "total_tickets": len(tickets),
             "risk_count": sum(risk_summary.values()),

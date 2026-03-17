@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional
 import os
+import re
 import requests  # type: ignore[import-untyped]
 from requests.adapters import HTTPAdapter  # type: ignore[import-untyped]
 
@@ -31,7 +32,7 @@ class AnimeAgent:
         to query the Jikan API (a public MyAnimeList wrapper).  Otherwise it
         falls back to the local catalogue.
         """
-        normalized = (query or "").strip().lower()
+        normalized = self._normalize_query(query)
         if not normalized:
             self.last_results = []
             return []
@@ -50,9 +51,12 @@ class AnimeAgent:
                 )
                 data = resp.json().get("data", []) if resp is not None else []
                 results = [
-                    {"title": item.get("title"), "url": item.get("url")}
+                    {
+                        "title": str(item.get("title")).strip(),
+                        "url": str(item.get("url")).strip(),
+                    }
                     for item in data
-                    if item.get("title") and item.get("url")
+                    if self._is_valid_remote_item(item)
                 ]
                 self.last_results = results
                 self._cache[normalized] = list(results)
@@ -68,6 +72,24 @@ class AnimeAgent:
         self.last_results = results
         self._cache[normalized] = list(results)
         return results
+
+    @staticmethod
+    def _normalize_query(query: str) -> str:
+        cleaned = re.sub(r"\s+", " ", (query or "").strip().lower())
+        if not cleaned:
+            return ""
+        # Keep lookup terms predictable and avoid oversized API requests.
+        return cleaned[:100]
+
+    @staticmethod
+    def _is_valid_remote_item(item: Dict[str, Any]) -> bool:
+        title = str(item.get("title") or "").strip()
+        url = str(item.get("url") or "").strip()
+        if not title or not url:
+            return False
+        if len(title) > 300:
+            return False
+        return url.startswith("http://") or url.startswith("https://")
 
     def select(self, index: int) -> Dict[str, Any]:
         """Pick an entry by index from the last search results."""

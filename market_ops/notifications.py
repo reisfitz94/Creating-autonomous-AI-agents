@@ -1,6 +1,4 @@
 import os
-import json
-from typing import Any
 
 
 SlackWebhook = os.getenv("SLACK_WEBHOOK_URL")
@@ -17,7 +15,7 @@ def send_slack(message: str):
     """
     if SlackWebhook:
         try:
-            import requests
+            import requests  # type: ignore[import-untyped]
 
             resp = requests.post(SlackWebhook, json={"text": message}, timeout=5)
             resp.raise_for_status()

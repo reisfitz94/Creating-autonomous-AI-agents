@@ -1,5 +1,6 @@
 from typing import Dict, Any, List
 import os
+import re
 
 try:
     import openai
@@ -20,6 +21,17 @@ def simple_opportunity_score(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     sent = data.get("sent", {}) or {}
     news = data.get("news", []) or []
 
+    symbols_upper = {str(symbol).upper() for symbol in fin.keys()}
+    news_counts: Dict[str, int] = {symbol: 0 for symbol in symbols_upper}
+    for item in news:
+        headline = str(item.get("headline", ""))
+        tokens = re.findall(r"[A-Z0-9$]+", headline.upper())
+        # Count each symbol once per headline to avoid over-weighting repeated mentions.
+        mentioned = {token.lstrip("$") for token in tokens}
+        for token in mentioned:
+            if token in news_counts:
+                news_counts[token] += 1
+
     # basic heuristics
     scores: List[Dict[str, Any]] = []
     for symbol, info in fin.items():
@@ -32,9 +44,7 @@ def simple_opportunity_score(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             sentiment = float(sent.get(symbol, {}).get("sentiment", 0.0) or 0.0)
         except (TypeError, ValueError):
             sentiment = 0.0
-        news_count = sum(
-            1 for item in news if symbol.lower() in item.get("headline", "").lower()
-        )
+        news_count = news_counts.get(str(symbol).upper(), 0)
         score = pct_change * 0.5 + sentiment * 0.3 + news_count * 0.2
         scores.append(
             {

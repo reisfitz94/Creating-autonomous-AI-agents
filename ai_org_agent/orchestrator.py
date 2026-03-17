@@ -124,18 +124,18 @@ class Orchestrator:
         self.log(out["exec"])
         self.store_vector({"text": out["exec"], "role": "exec"})
 
-        out["arch"] = self.tech_lead.act({}, self.memory)
+        out["arch"] = self.tech_lead.act({"objective": objective}, self.memory)
         self.log(out["arch"])
         self.store_vector({"text": out["arch"], "role": "tech"})
 
-        out["model"] = self.ds.act({}, self.memory)
+        out["model"] = self.ds.act({"objective": objective}, self.memory)
         self.log(out["model"])
         self.store_vector({"text": out["model"], "role": "ds"})
 
         # add critique step
         if not self.self_critique(out["model"]):
             self.log("Data scientist output failed critique, retrying")
-            out["model"] = self.ds.act({}, self.memory)
+            out["model"] = self.ds.act({"objective": objective}, self.memory)
             self.log(out["model"])
 
         out["audit"] = self.auditor.act({}, self.memory)

@@ -31,6 +31,21 @@ def test_predict_sprint_slippage():
     assert slippage > 0
 
 
+def test_predict_sprint_slippage_with_model():
+    agent = AIProjectManagerAgent()
+
+    class DummyModel:
+        def predict(self, df):
+            assert list(df.columns) == ["velocity", "remaining"]
+            assert df.shape == (1, 2)
+            return [3.5]
+
+    slippage = agent.predict_sprint_slippage(
+        velocity_history=[10, 12, 8], remaining_work=20, model=DummyModel()
+    )
+    assert slippage == 3.5
+
+
 def test_risk_summary_and_mitigation():
     agent = AIProjectManagerAgent()
     tickets = [

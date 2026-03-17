@@ -1,11 +1,12 @@
 import argparse
-import os
+
 from .orchestrator import MarketOpsCommander
 from .scheduler import run_periodic
 
 
 def main():
     parser = argparse.ArgumentParser(description="Market Ops Commander utilities")
+    parser.add_argument("--db-path", help="path to sqlite file for persisting strategy")
     sub = parser.add_subparsers(dest="cmd")
 
     sub.add_parser("run", help="Execute one run of the orchestrator")
@@ -15,7 +16,6 @@ def main():
     sched.add_argument(
         "--interval", type=float, default=60, help="Minutes between runs"
     )
-    sched.add_argument("--db-path", help="path to sqlite file for persisting strategy")
 
     api = sub.add_parser("api", help="Launch FastAPI server")
     api.add_argument("--host", default="127.0.0.1")
@@ -23,15 +23,11 @@ def main():
 
     args = parser.parse_args()
     if args.cmd == "run":
-        moc = MarketOpsCommander(
-            db_path=args.db_path if hasattr(args, "db_path") else None
-        )
+        moc = MarketOpsCommander(db_path=args.db_path)
         res = moc.run_loop()
         print(res)
     elif args.cmd == "status":
-        moc = MarketOpsCommander(
-            db_path=args.db_path if hasattr(args, "db_path") else None
-        )
+        moc = MarketOpsCommander(db_path=args.db_path)
         print(moc.memory)
     elif args.cmd == "schedule":
         run_periodic(interval_minutes=args.interval)

@@ -29,3 +29,11 @@ def test_simulation():
     noisy = orch.simulate_drift(orig, noise_level=0.1)
     assert len(noisy) == len(orig)
     assert any(o != n for o, n in zip(orig, noisy))
+
+
+def test_objective_context_propagates_to_outputs():
+    orch = Orchestrator()
+    result = orch.run_task("reduce churn")
+    assert "reduce churn" in result["outputs"]["exec"].lower()
+    assert "reduce churn" in result["outputs"]["arch"].lower()
+    assert "reduce churn" in result["outputs"]["model"].lower()

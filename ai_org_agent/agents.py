@@ -14,7 +14,10 @@ class ExecutiveAgent(BaseAgent):
         super().__init__("Executive")
 
     def act(self, task: Dict[str, Any], memory: Dict[str, Any]) -> str:
-        return f"Executive sets objectives: {task.get('objective', '')}"
+        objective = str(task.get("objective", "")).strip()
+        if not objective:
+            objective = "unspecified objective"
+        return f"Executive sets objectives: {objective}"
 
 
 class TechnicalLeadAgent(BaseAgent):
@@ -22,6 +25,9 @@ class TechnicalLeadAgent(BaseAgent):
         super().__init__("TechnicalLead")
 
     def act(self, task: Dict[str, Any], memory: Dict[str, Any]) -> str:
+        objective = str(task.get("objective", "")).strip()
+        if objective:
+            return f"Technical lead defines architecture for: {objective}"
         return "Technical lead defines architecture"
 
 
@@ -30,6 +36,9 @@ class DataScientistAgent(BaseAgent):
         super().__init__("DataScientist")
 
     def act(self, task: Dict[str, Any], memory: Dict[str, Any]) -> str:
+        objective = str(task.get("objective", "")).strip()
+        if objective:
+            return f"Data scientist builds prototype model for: {objective}"
         return "Data scientist builds prototype model"
 
 
@@ -66,10 +75,17 @@ class MonitoringAgent(BaseAgent):
 
     def detect_drift(self, data: list) -> bool:
         # simple change detection: check if mean shifts by >10%
-        if not data:
+        numeric = []
+        for item in data:
+            try:
+                numeric.append(float(item))
+            except (TypeError, ValueError):
+                continue
+        if len(numeric) < 2:
             return False
-        mean = sum(data) / len(data)
-        start = sum(data[: max(1, len(data) // 4)]) / max(1, len(data) // 4)
+        mean = sum(numeric) / len(numeric)
+        window = max(1, len(numeric) // 4)
+        start = sum(numeric[:window]) / window
         return abs(mean - start) / (start + 1e-9) > 0.1
 
 

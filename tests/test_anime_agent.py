@@ -42,6 +42,34 @@ def test_search_jikan(monkeypatch):
     assert results == [{"title": "Naruto", "url": "http://n"}]
 
 
+def test_search_jikan_filters_invalid_items(monkeypatch):
+    monkeypatch.setenv("USE_JIKAN", "1")
+
+    class FakeResp:
+        def __init__(self, data):
+            self._data = data
+
+        def json(self):
+            return {"data": self._data}
+
+    def fake_get(url, params, timeout):
+        return FakeResp(
+            [
+                {"title": "Valid", "url": "https://example.com/a"},
+                {"title": "Bad URL", "url": "javascript:alert(1)"},
+                {"title": "", "url": "https://example.com/b"},
+            ]
+        )
+
+    import requests
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    agent = AnimeAgent([])
+    results = agent.search("naruto")
+    assert results == [{"title": "Valid", "url": "https://example.com/a"}]
+
+
 def test_anime_cli(monkeypatch, capsys):
     from ai_anime_agent import cli
 

@@ -7,7 +7,9 @@ from ai_org_agent.orchestrator import Orchestrator
 def main():
     parser = argparse.ArgumentParser(description="Run the AI org orchestrator")
     parser.add_argument("objective", help="Business objective to pursue")
-    parser.add_argument("--simulate", action="store_true", help="Run a drift simulation example")
+    parser.add_argument(
+        "--simulate", action="store_true", help="Run a drift simulation example"
+    )
     args = parser.parse_args()
 
     orch = Orchestrator()

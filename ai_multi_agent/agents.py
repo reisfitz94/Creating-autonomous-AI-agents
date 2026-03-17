@@ -22,7 +22,13 @@ class DataScientistAgent:
         y_series = pd.Series(y)
         if X_df.empty or y_series.empty:
             raise ValueError("X and y must not be empty")
+        if len(X_df) != len(y_series):
+            raise ValueError("X and y must have the same number of rows")
+        if not hasattr(model_cls, "__call__"):
+            raise ValueError("model_cls must be callable")
         self.model = model_cls(**kwargs)
+        if not hasattr(self.model, "fit"):
+            raise ValueError("model_cls must build a fit-capable estimator")
         self.model.fit(X_df, y_series)
         return self.model
 
@@ -48,7 +54,10 @@ class AuditorAgent:
             sampled = X_df
             y_sampled = y_series
 
-        corr = sampled.corrwith(y_sampled).abs().fillna(0.0)
+        numeric = sampled.select_dtypes(include=["number"])
+        if numeric.empty:
+            return False
+        corr = numeric.corrwith(y_sampled).abs().fillna(0.0)
         if not corr.empty and corr.max() > 0.95:
             return True
         return False
