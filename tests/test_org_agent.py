@@ -37,3 +37,11 @@ def test_objective_context_propagates_to_outputs():
     assert "reduce churn" in result["outputs"]["exec"].lower()
     assert "reduce churn" in result["outputs"]["arch"].lower()
     assert "reduce churn" in result["outputs"]["model"].lower()
+
+
+def test_objective_propagates_to_all_agents():
+    orch = Orchestrator()
+    result = orch.run_task("reduce churn")
+    outputs = result["outputs"]
+    for key in ("audit", "risk", "deploy", "monitor", "cost"):
+        assert "reduce churn" in outputs[key].lower(), f"{key} output missing objective"

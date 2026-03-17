@@ -47,6 +47,9 @@ class AuditorAgent(BaseAgent):
         super().__init__("Auditor")
 
     def act(self, task: Dict[str, Any], memory: Dict[str, Any]) -> str:
+        objective = str(task.get("objective", "")).strip()
+        if objective:
+            return f"Auditor checks for leakage, bias and compliance risks for: {objective}"
         return "Auditor checks for leakage and bias"
 
 
@@ -55,6 +58,9 @@ class RiskComplianceAgent(BaseAgent):
         super().__init__("RiskCompliance")
 
     def act(self, task: Dict[str, Any], memory: Dict[str, Any]) -> str:
+        objective = str(task.get("objective", "")).strip()
+        if objective:
+            return f"Risk agent reviews regulatory compliance for: {objective}"
         return "Risk agent reviews regulatory compliance"
 
 
@@ -63,6 +69,9 @@ class DeploymentEngineerAgent(BaseAgent):
         super().__init__("DeploymentEngineer")
 
     def act(self, task: Dict[str, Any], memory: Dict[str, Any]) -> str:
+        objective = str(task.get("objective", "")).strip()
+        if objective:
+            return f"Deployment engineer packages artifacts for: {objective}"
         return "Deployment engineer packages artifacts"
 
 
@@ -71,6 +80,9 @@ class MonitoringAgent(BaseAgent):
         super().__init__("Monitoring")
 
     def act(self, task: Dict[str, Any], memory: Dict[str, Any]) -> str:
+        objective = str(task.get("objective", "")).strip()
+        if objective:
+            return f"Monitoring agent watches performance and drift for: {objective}"
         return "Monitoring agent watches performance and drift"
 
     def detect_drift(self, data: list) -> bool:
@@ -94,4 +106,7 @@ class CostOptimizationAgent(BaseAgent):
         super().__init__("CostOptimization")
 
     def act(self, task: Dict[str, Any], memory: Dict[str, Any]) -> str:
+        objective = str(task.get("objective", "")).strip()
+        if objective:
+            return f"Cost agent estimates compute/token expense for: {objective}"
         return "Cost agent estimates compute/token expense"

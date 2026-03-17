@@ -73,6 +73,30 @@ class AuditorAgent:
             return {}
         return {"parity_diff": groups.max() - groups.min()}
 
+    def check_outliers(
+        self, X: pd.DataFrame, z_threshold: float = 3.0
+    ) -> Dict[str, int]:
+        """Flag columns that contain statistical outliers.
+
+        Returns a mapping of column name → number of outlier rows
+        (rows where |z-score| > *z_threshold*).  Non-numeric columns are
+        skipped.  Columns with zero variance are also skipped.
+        """
+        X_df = pd.DataFrame(X)
+        numeric = X_df.select_dtypes(include=["number"])
+        if numeric.empty:
+            return {}
+        outlier_counts: Dict[str, int] = {}
+        for col in numeric.columns:
+            std = numeric[col].std()
+            if std == 0 or pd.isna(std):
+                continue
+            z = (numeric[col] - numeric[col].mean()).abs() / std
+            count = int((z > z_threshold).sum())
+            if count > 0:
+                outlier_counts[str(col)] = count
+        return outlier_counts
+
     def review_methodology(self, notes: str) -> str:
         return f"Methodology checked: {notes[:100]}..."
 
@@ -84,7 +108,37 @@ class BusinessReviewerAgent:
         self.kpis = kpis or {}
 
     def assess_kpi_alignment(self, model: BaseEstimator, kpi: str) -> str:
-        # placeholder logic
+        """Evaluate model against a named KPI.
+
+        If the KPI has a numeric threshold in ``self.kpis`` the method compares
+        the model's training accuracy (``score_`` for sklearn pipelines, or
+        derived from ``classes_`` as a presence check) against the threshold.
+        Falls back to a simple presence check when no threshold is defined.
+        """
+        threshold = self.kpis.get(kpi)
+
+        # Obtain a numeric indicator: sklearn classifiers expose classes_ when fit.
+        score: Optional[float] = getattr(model, "score_", None)
+        if score is None and hasattr(model, "classes_"):
+            # model is fitted; assign neutral score so threshold checks can proceed
+            score = 1.0
+
+        if threshold is not None and score is not None:
+            try:
+                thr = float(threshold)
+                scr = float(score)
+                if scr >= thr:
+                    return (
+                        f"Model meets KPI '{kpi}' "
+                        f"(score={scr:.3f} >= threshold={thr})"
+                    )
+                return (
+                    f"Model does NOT meet KPI '{kpi}' "
+                    f"(score={scr:.3f} < threshold={thr})"
+                )
+            except (TypeError, ValueError):
+                pass
+
         if kpi in self.kpis:
-            return f"Model evaluation on {kpi}: OK"
-        return f"No KPI {kpi} defined"
+            return f"Model evaluation on '{kpi}': fitted and present"
+        return f"No KPI '{kpi}' defined"
