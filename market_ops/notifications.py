@@ -1,6 +1,5 @@
 import os
 
-
 SlackWebhook = os.getenv("SLACK_WEBHOOK_URL")
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "0"))

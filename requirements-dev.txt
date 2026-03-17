@@ -2,7 +2,7 @@
 pytest
 pytest-cov
 coverage
-black
+black==24.4.2
 ruff
 mypy
 pre-commit
