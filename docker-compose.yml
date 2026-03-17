@@ -4,6 +4,8 @@ services:
   market_ops:
     build: .
     image: creating-autonomous-ai-agents:market-ops
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     environment:
@@ -12,6 +14,9 @@ services:
       - USE_LLM=0
       - MARKET_OPS_API_KEY=
       - MARKET_OPS_DB_PATH=/app/data/market_ops.db
+      - MARKET_OPS_ALLOWED_HOSTS=127.0.0.1,localhost
+      - MARKET_OPS_RATE_LIMIT_WINDOW_SEC=60
+      - MARKET_OPS_RATE_LIMIT_MAX_REQUESTS=30
       - SLACK_WEBHOOK_URL=
       - SMTP_SERVER=
       - SMTP_PORT=
@@ -19,5 +24,9 @@ services:
       - SMTP_PASSWORD=
     volumes:
       - ./market_ops_data:/app/data   # optional persistent storage
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     restart: unless-stopped
     command: []  # allow override of default ENTRYPOINT if needed

@@ -276,6 +276,25 @@ When `MARKET_OPS_API_KEY` is set, include it for protected endpoints:
 curl -X POST http://127.0.0.1:8000/run -H "X-API-Key: $MARKET_OPS_API_KEY"
 ```
 
+Security-related environment variables:
+
+```bash
+MARKET_OPS_API_KEY=change-me
+MARKET_OPS_ALLOWED_HOSTS=127.0.0.1,localhost
+MARKET_OPS_CORS_ORIGINS=
+MARKET_OPS_ENFORCE_HTTPS=0
+MARKET_OPS_RATE_LIMIT_WINDOW_SEC=60
+MARKET_OPS_RATE_LIMIT_MAX_REQUESTS=30
+```
+
+Security hardening included in the API:
+
+* Constant-time API key comparison for protected endpoints.
+* In-memory rate limiting for protected endpoints (`/run`, `/experiment`).
+* Trusted host filtering via `MARKET_OPS_ALLOWED_HOSTS`.
+* Standard response security headers and escaped dashboard rendering.
+* Optional HTTPS redirect in production (`MARKET_OPS_ENFORCE_HTTPS=1`).
+
 A command‑line helper is also provided; you can run the orchestrator, print
 status, or spin up the scheduler without importing Python directly:
 

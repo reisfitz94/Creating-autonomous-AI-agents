@@ -69,3 +69,30 @@ def test_api_key_protection(monkeypatch):
 
     # reset to avoid side effects for future tests
     monkeypatch.setattr(api, "API_KEY", None)
+
+
+def test_security_headers_present():
+    r = client.get("/health")
+    assert r.status_code == 200
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert r.headers["x-frame-options"] == "DENY"
+    assert r.headers["referrer-policy"] == "no-referrer"
+    assert "content-security-policy" in r.headers
+
+
+def test_rate_limit_on_protected_endpoints(monkeypatch):
+    monkeypatch.setattr(api, "API_KEY", "secret")
+    monkeypatch.setattr(api, "RATE_LIMIT_MAX_REQUESTS", 2)
+    monkeypatch.setattr(api, "RATE_LIMIT_WINDOW_SEC", 60)
+    api.RATE_BUCKETS.clear()
+
+    ok1 = client.post("/run", headers={"X-API-Key": "secret"})
+    ok2 = client.post("/run", headers={"X-API-Key": "secret"})
+    limited = client.post("/run", headers={"X-API-Key": "secret"})
+
+    assert ok1.status_code == 200
+    assert ok2.status_code == 200
+    assert limited.status_code == 429
+
+    monkeypatch.setattr(api, "API_KEY", None)
+    api.RATE_BUCKETS.clear()
