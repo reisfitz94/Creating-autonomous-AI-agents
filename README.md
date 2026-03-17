@@ -227,8 +227,10 @@ A starting point for the autonomous market/ops agent described earlier.  The
   (configured via environment variables) with fallbacks to printing.
 * `/market_ops/scheduler.py` – `schedule`‑based periodic runner, now
   testable and configurable down to seconds.
-* `/market_ops/api.py` – FastAPI service exposing `/status`, `/run`,
-  `/strategy`, and `/experiment` endpoints.
+* `/market_ops/api.py` – FastAPI service exposing `/health`, `/metrics`,
+  `/status`, `/run`, `/strategy`, `/experiment`, and `/dashboard` endpoints.
+  Mutating endpoints (`/run`, `/experiment`) can be protected with
+  `MARKET_OPS_API_KEY`.
 * `/market_ops/cli.py` – command‑line interface allowing one‑off runs,
   scheduling, and API launch.
 * `/market_ops/config.py` – small helpers for reading environment variables.
@@ -268,6 +270,12 @@ To start the API server (after installing uvicorn):
 uvicorn market_ops.api:app --reload
 ```
 
+When `MARKET_OPS_API_KEY` is set, include it for protected endpoints:
+
+```bash
+curl -X POST http://127.0.0.1:8000/run -H "X-API-Key: $MARKET_OPS_API_KEY"
+```
+
 A command‑line helper is also provided; you can run the orchestrator, print
 status, or spin up the scheduler without importing Python directly:
 
@@ -304,6 +312,8 @@ Or use the provided `docker-compose.yml`:
 docker-compose up --build
 ```
 
+You can copy `.env.example` to `.env` and fill in values before running.
+
 A Kubernetes deployment manifest is also available under `k8s/deployment.yaml`.
 Apply it with:
 
@@ -326,6 +336,8 @@ Environment variables that influence behavior include:
   email alerts.
 * `MLFLOW_TRACKING_URI` – if set and `mlflow` is installed, experiments will be
   logged to the given tracking server.
+* `MARKET_OPS_API_KEY` – enables API-key protection for mutating endpoints.
+* `MARKET_OPS_DB_PATH` – sqlite path used by the API/orchestrator.
 
 The application also uses the standard Python `logging` module.  Logs are
 printed at INFO level and, when a database path is provided, are stored in the
@@ -336,3 +348,11 @@ LangChain/LLM reasoning for scoring, persist results in Postgres or a vector
 DB, and add notification channels.
 
 Feel free to explore or extend the agent for your own use cases!
+
+### 🚀 Release Automation
+
+Tag-based releases are automated by `.github/workflows/release.yml`:
+
+* Builds source/wheel artifacts using `python -m build`
+* Optionally publishes to PyPI when `PYPI_API_TOKEN` is configured
+* Builds and pushes Docker images to GHCR on version tags (`v*.*.*`)

@@ -10,6 +10,8 @@ services:
       # configure as needed or reference .env file
       - TWITTER_BEARER_TOKEN=
       - USE_LLM=0
+      - MARKET_OPS_API_KEY=
+      - MARKET_OPS_DB_PATH=/app/data/market_ops.db
       - SLACK_WEBHOOK_URL=
       - SMTP_SERVER=
       - SMTP_PORT=

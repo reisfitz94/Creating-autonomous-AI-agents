@@ -1,0 +1,20 @@
+{
+  "SafetyAgent": "安全エージェント",
+  "addr": "住所",
+  "capsys": "標準出力キャプチャ",
+  "captured": "キャプチャ結果",
+  "cli": "コマンドライン",
+  "main": "メイン処理",
+  "monkeypatch": "モック差替",
+  "out": "出力内容",
+  "readouterr": "出力読取",
+  "sys": "システム",
+  "test_safety_cli": "安全コマンドラインのテスト",
+  "Orchestrator": "指揮者",
+  "execute_tool": "ツール実行",
+  "orch": "指揮者インスタンス",
+  "res": "結果",
+  "self_critique": "自己批評",
+  "test_execute_tool_safe": "ツール安全実行テスト",
+  "test_self_critique": "自己批評テスト"
+}
